@@ -145,8 +145,7 @@ class Scheduler(object):
             func, args=args, connection=self.connection,
             kwargs=kwargs, result_ttl=result_ttl, ttl=ttl, id=id,
             description=description, timeout=timeout, meta=meta,
-            depends_on=depends_on, retry=retry,
-            on_success=on_success, on_failure=on_failure,
+            depends_on=depends_on,on_success=on_success,on_failure=on_failure,
         )
         if queue_name:
             job.origin = queue_name
@@ -155,6 +154,10 @@ class Scheduler(object):
 
         if self.queue_class_name:
             job.meta["queue_class_name"] = self.queue_class_name
+
+        if retry:
+            job.retries_left = retry.max
+            job.retry_intervals = retry.intervals
 
         if commit:
             job.save()
