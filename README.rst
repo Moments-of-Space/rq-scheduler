@@ -2,6 +2,8 @@
 RQ Scheduler
 ============
 
+*Forked from original by Moments of Space to include Retry functionality present in Python RQ*
+
 `RQ Scheduler <https://github.com/rq/rq-scheduler>`_ is a small package that
 adds job scheduling capabilities to `RQ <https://github.com/nvie/rq>`_,
 a `Redis <http://redis.io/>`_ based Python queuing library.

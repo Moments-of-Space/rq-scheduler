@@ -130,7 +130,8 @@ class Scheduler(object):
 
     def _create_job(self, func, args=None, kwargs=None, commit=True,
                     result_ttl=None, ttl=None, id=None, description=None,
-                    queue_name=None, timeout=None, meta=None, depends_on=None, on_success=None, on_failure=None):
+                    queue_name=None, timeout=None, meta=None, depends_on=None,
+                    retry=None, on_success=None, on_failure=None):
         """
         Creates an RQ job and saves it to Redis. The job is assigned to the
         given queue name if not None else it is assigned to scheduler queue by
@@ -144,7 +145,8 @@ class Scheduler(object):
             func, args=args, connection=self.connection,
             kwargs=kwargs, result_ttl=result_ttl, ttl=ttl, id=id,
             description=description, timeout=timeout, meta=meta,
-            depends_on=depends_on,on_success=on_success,on_failure=on_failure,
+            depends_on=depends_on, retry=retry,
+            on_success=on_success, on_failure=on_failure,
         )
         if queue_name:
             job.origin = queue_name
@@ -196,12 +198,14 @@ class Scheduler(object):
         depends_on = kwargs.pop('depends_on', None)
         meta = kwargs.pop('meta', None)
         queue_name = kwargs.pop('queue_name', None)
+        retry = kwargs.pop('retry', None)
         on_success = kwargs.pop('on_success', None)
         on_failure = kwargs.pop('on_failure', None)
 
         job = self._create_job(func, args=args, kwargs=kwargs, timeout=timeout,
                                id=job_id, result_ttl=job_result_ttl, ttl=job_ttl,
-                               description=job_description, meta=meta, queue_name=queue_name, depends_on=depends_on,
+                               description=job_description, meta=meta, queue_name=queue_name,
+                               depends_on=depends_on, retry=retry,
                                on_success=on_success, on_failure=on_failure)
         self.connection.zadd(self.scheduled_jobs_key,
                               {job.id: to_unix(scheduled_time)})
@@ -221,13 +225,15 @@ class Scheduler(object):
         depends_on = kwargs.pop('depends_on', None)
         meta = kwargs.pop('meta', None)
         queue_name = kwargs.pop('queue_name', None)
+        retry = kwargs.pop('retry', None)
         on_success = kwargs.pop('on_success', None)
         on_failure = kwargs.pop('on_failure', None)
 
         job = self._create_job(func, args=args, kwargs=kwargs, timeout=timeout,
                                id=job_id, result_ttl=job_result_ttl, ttl=job_ttl,
                                description=job_description, meta=meta, queue_name=queue_name,
-                               depends_on=depends_on, on_success=on_success, on_failure=on_failure)
+                               depends_on=depends_on, retry=retry,
+                               on_success=on_success, on_failure=on_failure)
         self.connection.zadd(self.scheduled_jobs_key,
                               {job.id: to_unix(datetime.utcnow() + time_delta)})
         return job
@@ -235,7 +241,8 @@ class Scheduler(object):
     def schedule(self, scheduled_time, func, args=None, kwargs=None,
                  interval=None, repeat=None, result_ttl=None, ttl=None,
                  timeout=None, id=None, description=None,
-                 queue_name=None, meta=None, depends_on=None, on_success=None, on_failure=None):
+                 queue_name=None, meta=None, depends_on=None, retry=None,
+                 on_success=None, on_failure=None):
         """
         Schedule a job to be periodically executed, at a certain interval.
         """
@@ -246,7 +253,7 @@ class Scheduler(object):
                                result_ttl=result_ttl, ttl=ttl, id=id,
                                description=description, queue_name=queue_name,
                                timeout=timeout, meta=meta, depends_on=depends_on,
-                               on_success=on_success, on_failure=on_failure)
+                               retry=retry, on_success=on_success, on_failure=on_failure)
 
         if interval is not None:
             job.meta['interval'] = int(interval)
@@ -261,7 +268,7 @@ class Scheduler(object):
 
     def cron(self, cron_string, func, args=None, kwargs=None, repeat=None,
              queue_name=None, id=None, timeout=None, description=None, meta=None, use_local_timezone=False,
-             depends_on=None, on_success=None, on_failure=None):
+             depends_on=None, retry=None, on_success=None, on_failure=None):
         """
         Schedule a cronjob
         """
@@ -272,7 +279,7 @@ class Scheduler(object):
         job = self._create_job(func, args=args, kwargs=kwargs, commit=False,
                                result_ttl=-1, id=id, queue_name=queue_name,
                                description=description, timeout=timeout, meta=meta, depends_on=depends_on,
-                               on_success=on_success, on_failure=on_failure)
+                               retry=retry, on_success=on_success, on_failure=on_failure)
 
         job.meta['cron_string'] = cron_string
         job.meta['use_local_timezone'] = use_local_timezone
